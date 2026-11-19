@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a1633">
+<title>Mee Laban Photo Booth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== THEME (edit accent colours here) ===== */
+:root{--navy:#0a1633;--blue:#1f4fd8;--gold:#f2b632;--white:#fff;--muted:#b7c3e6;
+--top:env(safe-area-inset-top,0px);--bot:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--navy);color:var(--white);font-family:Outfit,system-ui,sans-serif;overflow:hidden}
+h1,h2,.display{font-family:Fraunces,Georgia,serif;font-weight:900;line-height:1.1}
+.screen{position:fixed;inset:0;height:100dvh;display:none;flex-direction:column;align-items:center;
+padding:calc(var(--top) + 12px) 16px calc(var(--bot) + 14px);overflow-y:auto}
+.screen.on{display:flex;animation:in .4s ease}
+@keyframes in{from{opacity:0;transform:scale(.98)}}
+.btn{min-height:56px;width:100%;max-width:360px;border:0;border-radius:28px;font:700 17px Outfit,sans-serif;
+color:var(--white);background:var(--blue);padding:0 22px;cursor:pointer;margin-top:10px;transition:transform .12s}
+.btn:active{transform:scale(.97)}.btn.gold{background:var(--gold);color:var(--navy)}
+.btn.ghost{background:transparent;border:2px solid var(--muted);min-height:48px;font-size:15px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:360px;margin-top:12px}
+.grid .btn{margin:0;min-height:52px;font-size:14px;padding:0 8px}
+.grid .full{grid-column:1/-1}
+small,.sub{color:var(--muted);text-align:center}
+/* welcome */
+#welcome{justify-content:center;text-align:center;gap:10px;background:radial-gradient(circle at 50% 40%,#1b3a9a55,transparent 65%),var(--navy)}
+#welcome .logo{font-size:min(16vw,64px);letter-spacing:.04em;animation:pop 1s ease both;text-shadow:0 0 30px #1f4fd8}
+#welcome .logo i{color:var(--gold);font-style:normal}
+@keyframes pop{from{opacity:0;transform:scale(.7)}}
+.dot{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--gold);opacity:.6;animation:fl 3s infinite}
+@keyframes fl{from{transform:translateY(40px);opacity:0}50%{opacity:.7}to{transform:translateY(-60px);opacity:0}}
+/* camera */
+#cam{padding-left:0;padding-right:0;justify-content:space-between}
+.head{text-align:center;padding:0 12px}.head b{font:900 18px Fraunces,serif}
+.stage{position:relative;aspect-ratio:9/16;flex:1 1 0;min-height:0;max-width:100%;background:#000;border-radius:16px;overflow:hidden;margin:8px 0}
+.stage video{position:absolute;object-fit:cover;background:#111}
+.stage canvas#ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.mirror{transform:scaleX(-1)}
+#count{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font:900 30vw/1 Fraunces,serif;color:#fff;text-shadow:0 0 40px var(--blue);pointer-events:none}
+#count.on{display:flex}#count span{animation:pop .8s ease both}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#flash.on{animation:fl2 .4s}@keyframes fl2{from{opacity:.9}to{opacity:0}}
+.bar{display:flex;align-items:center;justify-content:center;gap:26px;width:100%;padding:0 16px}
+.shutter{width:76px;height:76px;border-radius:50%;border:5px solid #fff;background:var(--gold);cursor:pointer;box-shadow:0 0 24px #1f4fd8}
+.shutter:active{transform:scale(.92)}
+.round{width:56px;height:56px;border-radius:50%;border:0;background:#1d2d5e;color:#fff;font-size:22px;cursor:pointer}
+.lbl{font-weight:700;font-size:13px;letter-spacing:.06em;text-align:center;margin-top:4px}
+/* reveal */
+#reveal{justify-content:flex-start;text-align:center}
+.photo{position:relative;flex:1 1 0;min-height:200px;aspect-ratio:9/16;max-width:100%;margin:8px 0;border-radius:14px;overflow:hidden}
+.photo img{width:100%;height:100%;object-fit:contain;display:block;transition:filter .3s}
+.wait{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;background:#0a163355}
+.wait h2{font-size:26px}.spin{width:34px;height:34px;border:4px solid #fff5;border-top-color:var(--gold);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#fin{display:none;flex-direction:column;align-items:center;width:100%}#fin.on{display:flex}
+.tick{width:64px;height:64px;border-radius:50%;background:var(--gold);color:var(--navy);display:grid;place-items:center;font-size:34px;font-weight:900;animation:pop .6s both;margin:10px}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(var(--bot) + 20px);max-width:380px;margin:auto;background:#fff;color:var(--navy);
+border-radius:16px;padding:14px 16px;font-weight:600;font-size:15px;display:none;z-index:9;text-align:center;box-shadow:0 8px 30px #0008}
+.toast.on{display:block}
+/* admin */
+#qr{align-items:center;gap:8px}#qr input{width:100%;max-width:360px;height:48px;border-radius:12px;border:2px solid var(--blue);padding:0 12px;font:16px Outfit;background:#fff;color:#000}
+#qr canvas{width:100%;max-width:300px;height:auto;border-radius:10px;margin-top:8px}
+#rot{position:fixed;inset:0;background:var(--navy);z-index:20;display:none;align-items:center;justify-content:center;font:900 22px Fraunces,serif;text-align:center;padding:30px}
+@media (orientation:landscape) and (max-height:500px){#rot{display:flex}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important}}
+</style></head><body>
+
+<div id="rot">Please hold your phone vertically 📱</div>
+
+<!-- WELCOME -->
+<section id="welcome" class="screen on">
+  <i class="dot" style="left:18%;top:62%"></i><i class="dot" style="left:78%;top:55%;animation-delay:.8s"></i><i class="dot" style="left:50%;top:75%;animation-delay:1.4s"></i>
+  <div class="display logo" id="wLogo">MEE <i>L</i>ABAN</div>
+  <h1 style="font-size:22px">WELCOME TO MEE LABAN</h1>
+  <p class="sub" style="font-size:17px">Create Your Happy Moment ✨</p>
+</section>
+
+<!-- PERMISSION -->
+<section id="perm" class="screen" style="justify-content:center;text-align:center">
+  <div style="font-size:56px">📷</div>
+  <h2 id="permMsg" style="font-size:24px;margin:10px 0 4px">Camera access is needed to capture your Mee Laban moment.</h2>
+  <p class="sub" id="permSub">Oops! We couldn't access your camera. Please allow camera access and try again.</p>
+  <button class="btn gold" id="allow">ALLOW CAMERA</button>
+  <button class="btn ghost" id="retry">Try again</button>
+</section>
+
+<!-- CAMERA -->
+<section id="cam" class="screen">
+  <div class="head"><b id="biz"></b><br><small>Ready for your Mee Laban moment? ✨</small></div>
+  <div class="stage" id="stage">
+    <video id="vid" playsinline muted autoplay></video>
+    <canvas id="ov"></canvas>
+    <div id="count"><span id="cn">3</span></div><div id="flash"></div>
+  </div>
+  <div class="bar">
+    <div><button class="round" id="swap" aria-label="Switch camera">🔄</button><div class="lbl" style="font-size:11px">Switch</div></div>
+    <div><button class="shutter" id="snap" aria-label="Capture moment"></button><div class="lbl">CAPTURE MOMENT</div></div>
+    <div style="width:56px"></div>
+  </div>
+</section>
+
+<!-- REVEAL / SHARE -->
+<section id="reveal" class="screen">
+  <div class="photo"><img id="shot" alt="Your Mee Laban photo" style="filter:blur(28px)">
+    <div class="wait" id="wait"><div class="spin"></div><h2>WAIT FOR YOUR BEAUTIFUL MOMENT ✨</h2><p>Your Mee Laban memory is getting ready...</p></div></div>
+  <div id="fin">
+    <h2 style="font-size:24px">YOUR MEE LABAN MOMENT 💙</h2>
+    <button class="btn gold" id="dl">DOWNLOAD MY PHOTO</button>
+    <h2 style="font-size:19px;margin-top:18px">SHARE YOUR MEE LABAN MOMENT</h2><small>Share the happiness. Tag us.</small>
+    <div class="grid">
+      <button class="btn" data-s="story">Share to Instagram Story</button>
+      <button class="btn" data-s="post">Share to Instagram</button>
+      <button class="btn" data-s="reel">Share as Reel</button>
+      <button class="btn" data-s="wa">Share on WhatsApp</button>
+      <button class="btn" data-s="status">Share to WhatsApp Status</button>
+      <button class="btn" data-s="native">Share</button>
+      <button class="btn gold full" id="dl2">Save to Gallery</button>
+    </div>
+    <button class="btn ghost" id="done">Done</button>
+    <small style="margin:14px 0 4px">Your photo is processed on your device and is not stored by Mee Laban.</small>
+  </div>
+</section>
+
+<!-- THANK YOU -->
+<section id="thanks" class="screen" style="justify-content:center;text-align:center">
+  <div class="tick">✓</div>
+  <h2 style="font-size:28px">THANK YOU FOR SHARING THE MEE LABAN LOVE 💙</h2>
+  <p class="sub" style="margin:8px 0 12px">Keep the memory. Share the moment. ✨<br>Come back for another beautiful moment!</p>
+  <button class="btn gold" id="again">📸 TAKE ANOTHER PHOTO</button>
+  <button class="btn" id="shareAgain">📱 SHARE AGAIN</button>
+  <button class="btn ghost" id="ig">💙 VISIT OUR INSTAGRAM</button>
+  <p style="margin-top:14px;font-weight:700" id="tHandle"></p><small id="tLoc"></small>
+</section>
+
+<!-- QR GENERATOR: open  /#qr  -->
+<section id="qr" class="screen">
+  <h2 style="font-size:22px">QR Generator</h2>
+  <input id="qurl" inputmode="url" aria-label="Photo booth URL">
+  <canvas id="qcv" width="10" height="10"></canvas>
+  <button class="btn gold" id="qpng">Download QR PNG (high-res)</button>
+  <button class="btn" id="qsvg">Download QR SVG</button>
+  <button class="btn" id="qposter">Download branded poster PNG</button>
+  <button class="btn ghost" id="qprint">Print poster</button>
+  <a href="#" class="sub" style="margin-top:8px;color:var(--muted)">Back to Photo Booth</a>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+/* ================= CONFIG (central place to customise) ================= */
+const CONFIG={
+  PHOTO_BOOTH_URL:"https://yourdomain.com/photo-booth", // <- change QR destination here (or use /#qr tool)
+  BUSINESS_NAME:"Mee Laban", LOCATION:"Perambalur",
+  INSTAGRAM_HANDLE:"@mee_laban_perambalur", HASHTAG:"#MeeLaban",
+  LOGO_IMAGE:"",   // e.g. "assets/logo.png"  (blank = text wordmark)
+  FRAME_IMAGE:"",  // e.g. "assets/frame.png": 1080x1920 PNG with TRANSPARENT photo window (blank = built-in frame)
+  WINDOW:{x:60,y:300,w:960,h:1230,r:40}, // photo window inside the 1080x1920 frame (px)
+  OUT_W:1080, OUT_H:1920, WELCOME_MS:1100,
+  SHARE_TEXT:"I just created my Mee Laban moment! 💙✨\n📍 Mee Laban Perambalur\n@mee_laban_perambalur\n#MeeLaban",
+  C:{navy:"#0a1633",blue:"#1f4fd8",gold:"#f2b632",white:"#fff"}
+};
+const $=id=>document.getElementById(id);
+const track=(e)=>{try{(window.MEE_ANALYTICS||console.debug)(e)}catch(_){}}; // hook analytics here; no personal data
+
+/* ================= UI STATE ================= */
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id))}
+let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),4200)}
+
+/* ================= FRAME (draw once, used on preview + final) ================= */
+let frameImg=null,logoImg=null;
+const loadImg=s=>new Promise(r=>{if(!s)return r(null);const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=s});
+function rr(c,x,y,w,h,r){c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function drawFrame(c,W,H){ // W,H are 1080x1920-scaled via transform by caller
+  if(frameImg){c.drawImage(frameImg,0,0,1080,1920);return}
+  const k=CONFIG.C,w=CONFIG.WINDOW;
+  c.save();c.beginPath();c.rect(0,0,1080,1920);rr(c,w.x,w.y,w.w,w.h,w.r);
+  c.fillStyle=k.navy;c.fill('evenodd');c.restore();
+  c.strokeStyle=k.gold;c.lineWidth=6;c.beginPath();rr(c,w.x-8,w.y-8,w.w+16,w.h+16,w.r+8);c.stroke();
+  c.textAlign='center';c.fillStyle=k.white;
+  if(logoImg){const s=Math.min(700/logoImg.width,170/logoImg.height);c.drawImage(logoImg,540-logoImg.width*s/2,80,logoImg.width*s,logoImg.height*s)}
+  else{c.font='900 130px Fraunces,Georgia,serif';c.fillText('MEE LABAN',540,200)}
+  c.fillStyle=k.gold;c.font='700 44px Outfit,sans-serif';c.fillText('Share Your Happy Moment!',540,265);
+  // dessert dots (pistachio / date / kunafa gold) along edges
+  [[40,40,'#8fbf5a'],[1040,40,k.gold],[40,1880,k.gold],[1040,1880,'#8fbf5a'],[540,1560,k.gold]].forEach(([x,y,col])=>{c.fillStyle=col;c.beginPath();c.arc(x,y,16,0,7);c.fill()});
+  c.fillStyle=k.white;c.font='900 84px Fraunces,Georgia,serif';c.fillText('SMILE • CLICK • SHARE',540,1665);
+  c.font='700 52px Outfit,sans-serif';c.fillText('Mee Laban '+CONFIG.LOCATION,540,1745);
+  c.fillStyle=k.gold;c.font='600 46px Outfit,sans-serif';c.fillText(CONFIG.INSTAGRAM_HANDLE,540,1810);
+  c.fillStyle=k.white;c.font='600 40px Outfit,sans-serif';c.fillText('📍 '+CONFIG.LOCATION+'   '+CONFIG.HASHTAG,540,1870);
+}
+function paintOverlay(){ // responsive: canvas is sized to the stage, content scaled from 1080x1920
+  const cv=$('ov'),r=$('stage').getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);
+  cv.width=r.width*d;cv.height=r.height*d;const c=cv.getContext('2d');c.setTransform(cv.width/1080,0,0,cv.height/1920,0,0);
+  drawFrame(c);positionVideo();
+}
+function positionVideo(){ // video sits exactly in the photo window (percentages = no hard-coded device sizes)
+  const w=CONFIG.WINDOW,v=$('vid').style;
+  v.left=w.x/10.8+'%';v.top=w.y/19.2+'%';v.width=w.w/10.8+'%';v.height=w.h/19.2+'%';
+}
+
+/* ================= CAMERA ================= */
+let stream=null,facing='user';
+async function startCam(){
+  stopCam();
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:facing},width:{ideal:1920},height:{ideal:1920}}});
+    const v=$('vid');v.srcObject=stream;v.classList.toggle('mirror',facing==='user');await v.play();
+    show('cam');paintOverlay();track('camera_permission_granted');return true;
+  }catch(e){show('perm');return false}
+}
+function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}}
+$('swap').onclick=()=>{facing=facing==='user'?'environment':'user';startCam()};
+$('allow').onclick=$('retry').onclick=startCam;
+addEventListener('resize',()=>{if($('cam').classList.contains('on'))paintOverlay()});
+
+/* ================= CAPTURE ================= */
+let finalBlob=null,finalURL=null,busy=false;
+function beep(){try{const a=new (window.AudioContext||webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=900;g.gain.value=.05;o.start();o.stop(a.currentTime+.07)}catch(_){}}
+$('snap').onclick=async()=>{
+  if(busy)return;busy=true;const c=$('count');c.classList.add('on');
+  for(const n of [3,2,1]){const s=$('cn');s.textContent=n;s.style.animation='none';void s.offsetWidth;s.style.animation='';await new Promise(r=>setTimeout(r,900))}
+  c.classList.remove('on');$('flash').classList.add('on');beep();
+  const cv=await compose();setTimeout(()=>$('flash').classList.remove('on'),400);
+  track('photo_captured');
+  if(!cv){busy=false;return toast('We couldn\'t save your photo. Please try again.')}
+  finalBlob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.95));
+  if(finalURL)URL.revokeObjectURL(finalURL);finalURL=URL.createObjectURL(finalBlob);
+  stopCam();revealFlow();busy=false;
+};
+async function compose(){ // camera frame -> cover-crop into window -> frame -> branding
+  try{
+    const v=$('vid'),cv=document.createElement('canvas');cv.width=CONFIG.OUT_W;cv.height=CONFIG.OUT_H;
+    const c=cv.getContext('2d'),w=CONFIG.WINDOW;c.imageSmoothingQuality='high';
+    c.fillStyle='#000';c.fillRect(0,0,1080,1920);
+    const vw=v.videoWidth,vh=v.videoHeight,s=Math.max(w.w/vw,w.h/vh),sw=w.w/s,sh=w.h/s;
+    c.save();c.beginPath();rr(c,w.x,w.y,w.w,w.h,w.r);c.clip();
+    if(facing==='user'){c.translate(w.x+w.w,w.y);c.scale(-1,1);c.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,w.w,w.h)}
+    else c.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,w.x,w.y,w.w,w.h);
+    c.restore();drawFrame(c);return cv;
+  }catch(e){return null}
+}
+
+/* ================= BLUR + REVEAL ================= */
+function revealFlow(){
+  const img=$('shot');img.src=finalURL;img.style.transition='none';img.style.filter='blur(28px)';
+  $('wait').style.display='flex';$('fin').classList.remove('on');show('reveal');
+  setTimeout(()=>{ // BLURRED -> LESS BLURRED -> SHARP
+    $('wait').style.display='none';img.style.transition='filter 1.6s ease';img.style.filter='blur(10px)';
+    setTimeout(()=>img.style.filter='blur(0)',60);
+    setTimeout(()=>{$('fin').classList.add('on');track('photo_revealed')},1700);
+  },2200);
+}
+
+/* ================= DOWNLOAD / SHARE ================= */
+const fname='MeeLaban_Perambalur_Moment.jpg';
+function download(){
+  try{const a=document.createElement('a');a.href=finalURL;a.download=fname;document.body.appendChild(a);a.click();a.remove();
+    track('photo_downloaded');toast('Saved! THANK YOU FOR VISITING MEE LABAN! 💙');return true}
+  catch(e){toast('We couldn\'t save your photo. Please try again.');return false}
+}
+$('dl').onclick=$('dl2').onclick=download;
+$('done').onclick=()=>show('thanks');
+async function nativeShare(){
+  const f=new File([finalBlob],fname,{type:'image/jpeg'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share({files:[f],text:CONFIG.SHARE_TEXT,title:'My Mee Laban moment'});return true}
+    catch(e){return e&&e.name==='AbortError'?'cancel':false}
+  }return false;
+}
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=async()=>{
+  const k=b.dataset.s;track('share_clicked');
+  if(k==='native'){const r=await nativeShare();if(r===false)toast('Sharing isn\'t supported on this browser. Download your photo and share it manually.');return}
+  if(k==='wa'){track('whatsapp_clicked');const r=await nativeShare();if(r===true||r==='cancel')return;
+    download();toast('Your photo is ready. Open WhatsApp and share it from your gallery.');
+    setTimeout(()=>location.href='https://wa.me/?text='+encodeURIComponent(CONFIG.SHARE_TEXT),1200);return}
+  if(k==='status'){track('status_clicked');const r=await nativeShare();if(r===true||r==='cancel')return;
+    download();toast('Your photo is ready! 💙 Open WhatsApp → Status → Add this photo.');return}
+  // Instagram: browsers cannot publish directly. Save + native share sheet (pick Instagram), else guide.
+  track('instagram_clicked');
+  const where={story:'Story',post:'Post',reel:'Reel'}[k];
+  const r=await nativeShare();if(r===true||r==='cancel')return;
+  download();toast('Your photo is ready. Save it and share it from Instagram: open Instagram → + → '+where+' → pick this photo.');
+});
+$('shareAgain').onclick=()=>show('reveal');
+$('ig').onclick=()=>window.open('https://instagram.com/'+CONFIG.INSTAGRAM_HANDLE.replace('@',''),'_blank');
+$('again').onclick=()=>{ // reset state, no page reload
+  track('take_again_clicked');if(finalURL)URL.revokeObjectURL(finalURL);finalURL=finalBlob=null;$('shot').removeAttribute('src');startCam();
+};
+
+/* ================= QR TOOL (/#qr) ================= */
+function qrMake(url,size){const q=qrcode(0,'H');q.addData(url);q.make();return q}
+function qrCanvas(url,size){ // quiet zone included, plain black/white for scan reliability
+  const q=qrMake(url),n=q.getModuleCount(),m=4,u=Math.floor(size/(n+m*2)),cv=document.createElement('canvas');
+  cv.width=cv.height=u*(n+m*2);const c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,cv.width,cv.height);c.fillStyle='#000';
+  for(let r=0;r<n;r++)for(let k=0;k<n;k++)if(q.isDark(r,k))c.fillRect((k+m)*u,(r+m)*u,u,u);return cv}
+function saveCanvas(cv,name){cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click()})}
+function qrPreview(){const v=$('qurl').value.trim();const s=qrCanvas(v,600),d=$('qcv');d.width=s.width;d.height=s.height;d.getContext('2d').drawImage(s,0,0)}
+function posterCanvas(){
+  const W=1240,H=1754,cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d'),k=CONFIG.C;
+  c.fillStyle=k.navy;c.fillRect(0,0,W,H);c.strokeStyle=k.gold;c.lineWidth=8;c.strokeRect(40,40,W-80,H-80);
+  c.textAlign='center';c.fillStyle=k.white;c.font='900 120px Fraunces,Georgia,serif';c.fillText('MEE LABAN',W/2,210);
+  c.fillStyle=k.gold;c.font='700 40px Outfit,sans-serif';c.fillText('P E R A M B A L U R',W/2,275);
+  c.fillStyle=k.white;c.font='900 84px Fraunces,Georgia,serif';c.fillText('SCAN & CREATE YOUR',W/2,420);c.fillText('MEE LABAN MOMENT',W/2,515);
+  const q=qrCanvas($('qurl').value.trim(),560);c.fillStyle='#fff';c.beginPath();rr(c,W/2-330,570,660,660,40);c.fill();c.drawImage(q,W/2-280,620,560,560);
+  c.fillStyle=k.white;c.font='700 50px Outfit,sans-serif';
+  ['1. SCAN QR','2. TAKE YOUR PHOTO','3. DOWNLOAD & SHARE'].forEach((t,i)=>c.fillText(t,W/2,1320+i*75));
+  c.fillStyle=k.gold;c.font='700 46px Outfit,sans-serif';c.fillText('Tag us '+CONFIG.INSTAGRAM_HANDLE,W/2,1590);
+  c.fillStyle=k.white;c.fillText('📍 '+CONFIG.LOCATION,W/2,1650);
+  c.font='900 56px Fraunces,Georgia,serif';c.fillStyle=k.gold;c.fillText('SCAN • CLICK • SHARE',W/2,1715);return cv}
+$('qurl').value=CONFIG.PHOTO_BOOTH_URL;$('qurl').oninput=qrPreview;
+$('qpng').onclick=()=>saveCanvas(qrCanvas($('qurl').value.trim(),2000),'MeeLaban_QR.png');
+$('qsvg').onclick=()=>{const q=qrMake($('qurl').value.trim()),s=q.createSvgTag({cellSize:10,margin:40,scalable:true}),a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'}));a.download='MeeLaban_QR.svg';a.click()};
+$('qposter').onclick=()=>saveCanvas(posterCanvas(),'MeeLaban_QR_Poster.png');
+$('qprint').onclick=()=>{const u=posterCanvas().toDataURL('image/png'),w=window.open('');if(w){w.document.write('<img src="'+u+'" style="width:100%" onload="print()">')}};
+
+/* ================= BOOT ================= */
+$('biz').textContent=CONFIG.BUSINESS_NAME+' '+CONFIG.LOCATION;
+$('tHandle').textContent=CONFIG.INSTAGRAM_HANDLE;$('tLoc').textContent='📍 '+CONFIG.LOCATION;
+function route(){if(location.hash==='#qr'){qrPreview();show('qr')}else if(!stream&&$('qr').classList.contains('on'))boot()}
+addEventListener('hashchange',route);
+async function boot(){
+  track('qr_open');show('welcome');
+  [frameImg,logoImg]=await Promise.all([loadImg(CONFIG.FRAME_IMAGE),loadImg(CONFIG.LOGO_IMAGE)]);
+  if(logoImg){$('wLogo').innerHTML='<img src="'+CONFIG.LOGO_IMAGE+'" alt="Mee Laban" style="max-width:70vw;max-height:30vh">'}
+  await Promise.all([new Promise(r=>setTimeout(r,CONFIG.WELCOME_MS)),document.fonts?document.fonts.ready:0]);
+  startCam(); // permission prompt appears naturally; denied -> friendly screen
+}
+if(location.hash==='#qr')route();else boot();
+</script></body></html>
